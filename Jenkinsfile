@@ -1,11 +1,16 @@
 pipeline {
     agent any
+    
+    // Add this block to fix the 'mvn: not found' error
+    tools {
+        maven '3.9.11' 
+    }
 
     environment {
-        // Update these to match your local Nexus setup
         NEXUS_VERSION = "nexus3"
         NEXUS_PROTOCOL = "http"
-        // Use 'host.docker.internal' if Jenkins is in Docker, otherwise use your local IP
+        // Since you are on a Mac, use this to let the Jenkins container 
+        // talk to the Nexus container/host
         NEXUS_URL = "host.docker.internal:8081" 
         NEXUS_REPOSITORY = "maven-releases"
         NEXUS_CREDENTIAL_ID = "nexus-credentials-id"
@@ -14,14 +19,13 @@ pipeline {
     stages {
         stage('Clone Assignment') {
             steps {
-                // Pulls the Spring Boot code from your HW6 GitHub repo
                 checkout scm
             }
         }
 
         stage('Build JAR') {
             steps {
-                // Build the Spring Boot application
+                // Now that the tool is defined, this command will work
                 sh 'mvn clean package -DskipTests'
             }
         }
@@ -29,11 +33,9 @@ pipeline {
         stage('Push to Nexus') {
             steps {
                 script {
-                    // Extract metadata from pom.xml for the upload
                     def pom = readMavenPom file: 'pom.xml'
+                    // The 'target' folder is created by the Build stage
                     def artifactPath = "target/${pom.artifactId}-${pom.version}.jar"
-
-                    echo "Uploading ${artifactPath} to Nexus..."
 
                     nexusArtifactUploader(
                         nexusVersion: "${NEXUS_VERSION}",
@@ -56,11 +58,7 @@ pipeline {
     }
     
     post {
-        success {
-            echo 'Artifact successfully deployed to Nexus!'
-        }
-        failure {
-            echo 'Pipeline failed. Check Jenkins logs and Nexus connectivity.'
-        }
+        success { echo 'Done!' }
+        failure { echo 'Pipeline failed.' }
     }
 }
