@@ -1,7 +1,7 @@
 pipeline {
     agent any
     tools {
-        maven 'maven3'
+        maven '3.9.11'
     }
     environment {
         NEXUS_URL = "host.docker.internal:8081" 
